@@ -105,6 +105,7 @@ def make_pred(timestamp, input_file, output_file):
         'device_activated'
     ]]
     pred = pred.fillna(0)
+    pred.loc[pred['device'] == 'device_7', 'device_activated'] = 0 # we set like this because room 7 is highly rarely used.
 
     return pred
 
