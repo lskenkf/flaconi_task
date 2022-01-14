@@ -1,4 +1,5 @@
 import os
+import sys
 import itertools
 import pandas as pd
 
@@ -112,9 +113,9 @@ def make_pred(timestamp, input_file, output_file):
 
 
 if __name__ == '__main__':
-    timestamp = '2016-08-31 23:59:59'
-    input_file = 'data\device_activations.csv'
-    output_file = 'data\myresult.csv'
+    print(sys.argv[1:])
+    timestamp, in_file, out_file = sys.argv[1:]
 
-    pred = make_pred(timestamp, input_file, output_file)
-    print(pred)
+    previous_readings = pd.read_csv(in_file)
+    result = make_pred(timestamp, in_file, out_file)
+    result.to_csv(out_file)
