@@ -5,11 +5,9 @@ import pandas as pd
 def get_data(timestamp, input_file):
     timestamp = pd.Timestamp(timestamp)
     data = pd.read_csv(input_file)
-
     data['time'] = data['time'].apply(
         lambda dt: dt[:-5] + '00:00'
     )
-
     data['time'] = pd.to_datetime(data['time'])
     data = data.loc[data.time <= timestamp]
 
@@ -74,11 +72,11 @@ def get_pred_hash(timestamp, input_file, output_file):
     return pred_hash
 
 
-def generate_prediction_holder(timestamp,pred_hash):
+def generate_prediction_holder(timestamp):
     timestamp = pd.Timestamp(timestamp)
     split_point = timestamp.round(freq='T')
     next_24_hours = pd.date_range(split_point, periods=24, freq='H').ceil('H')
-    device_names = sorted(pred_hash.device.unique())
+    device_names = ['device_' + str(i) for i in range(1,8)]
 
     xproduct = list(itertools.product(next_24_hours, device_names))
     prediction_holder = pd.DataFrame(xproduct, columns=['time', 'device'])
@@ -99,16 +97,14 @@ def generate_prediction_holder(timestamp,pred_hash):
 
 def make_pred(timestamp, input_file, output_file):
     pred_hash = get_pred_hash(timestamp, input_file, output_file)
-    prediction_holder = generate_prediction_holder(timestamp,pred_hash)
+    prediction_holder = generate_prediction_holder(timestamp)
     pred = prediction_holder.merge(pred_hash, how='left', on=['device', 'day_name', 'hour'])
     pred = pred[[
         'time',
         'device',
         'device_activated'
     ]]
-    pred = pred.sort_values(by=[
-        'time', 'device'
-    ])
+    pred = pred.fillna(0)
 
     return pred
 
