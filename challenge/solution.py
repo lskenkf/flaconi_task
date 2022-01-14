@@ -1,4 +1,3 @@
-import os
 import sys
 import itertools
 import pandas as pd
@@ -40,7 +39,6 @@ def extract_feature(data):
     data['day'] = data.time.dt.day
     data['week'] = data.time.dt.isocalendar().week
     data['hour'] = data.time.dt.hour
-
     data = data[[
         'device',
         'day_name',
@@ -48,6 +46,7 @@ def extract_feature(data):
         'device_activated',
         'time'
     ]]
+
     return data
 
 
@@ -78,10 +77,9 @@ def generate_prediction_holder(timestamp):
     split_point = timestamp.round(freq='T')
     next_24_hours = pd.date_range(split_point, periods=24, freq='H').ceil('H')
     device_names = ['device_' + str(i) for i in range(1,8)]
-
     xproduct = list(itertools.product(next_24_hours, device_names))
-    prediction_holder = pd.DataFrame(xproduct, columns=['time', 'device'])
 
+    prediction_holder = pd.DataFrame(xproduct, columns=['time', 'device'])
     prediction_holder['day_name'] = prediction_holder.time.dt.day_name()
     prediction_holder['hour'] = prediction_holder.time.dt.hour
     columns = [
@@ -90,7 +88,6 @@ def generate_prediction_holder(timestamp):
         'day_name',
         'hour'
     ]
-
     prediction_holder = prediction_holder[columns]
 
     return prediction_holder
@@ -113,9 +110,9 @@ def make_pred(timestamp, input_file, output_file):
 
 
 if __name__ == '__main__':
-    print(sys.argv[1:])
     timestamp, in_file, out_file = sys.argv[1:]
 
     previous_readings = pd.read_csv(in_file)
     result = make_pred(timestamp, in_file, out_file)
     result.to_csv(out_file)
+    #solution.py "2016-08-31 23:59:59" data/device_activations.csv myresult.csv

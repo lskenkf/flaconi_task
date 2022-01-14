@@ -48,3 +48,5 @@ if __name__ == '__main__':
     previous_readings = pd.read_csv(in_file)
     result = predict_future_activation(current_time, previous_readings)
     result.to_csv(out_file)
+
+# solution.py "2016-08-31 23:59:59" data/device_activations.csv myresult.csv
