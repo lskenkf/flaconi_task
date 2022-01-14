@@ -1,23 +1,42 @@
+import os
+import itertools
 import pandas as pd
 
-
-def get_train_data(timestamp, input_file):
+def get_data(timestamp, input_file):
     timestamp = pd.Timestamp(timestamp)
-    timestamp_next_hour = timestamp.round(freq='H')
     data = pd.read_csv(input_file)
+
+    data['time'] = data['time'].apply(
+        lambda dt: dt[:-5] + '00:00'
+    )
+
     data['time'] = pd.to_datetime(data['time'])
-    data_time_max = data.time.max()
+    data = data.loc[data.time <= timestamp]
 
-    if data_time_max > timestamp:
-        print('the max timestamp of input file is ahead of the input timestamp, but we have make it right')
-        data = data.loc[data.time <= timestamp]
-    else:
-        pass
-
-    return data, timestamp_next_hour
+    return data
 
 
-def extract_date_info(data):
+def fill_nan(data):
+    data = data.groupby(
+        ['device', 'time']
+    )['device_activated'].agg(
+        'max'
+    ).reset_index()
+
+    data = data.set_index(
+        ['time', 'device']
+    ).unstack(
+        fill_value=0
+    ).asfreq(
+        'H', fill_value=0
+    ).stack().sort_index(
+        level=1
+    ).reset_index()
+
+    return data
+
+
+def extract_feature(data):
     data['day_name'] = data.time.dt.day_name()
     data['day'] = data.time.dt.day
     data['week'] = data.time.dt.isocalendar().week
@@ -25,8 +44,6 @@ def extract_date_info(data):
 
     data = data[[
         'device',
-        'week',
-        'day',
         'day_name',
         'hour',
         'device_activated',
@@ -35,10 +52,72 @@ def extract_date_info(data):
     return data
 
 
-if __name__ == '__main__':
+def data_pipeline(timestamp, input_file):
+    data = get_data(timestamp, input_file)
+    data = fill_nan(data)
+    data = extract_feature(data)
 
-    timestamp = '2016-08-30 00:59:59'
-    input_file= 'data\device_activations.csv'
-    data,timestamp_next_hour = get_train_data(timestamp,input_file)
-    data = extract_date_info(data)
-    print(str(data))
+    return data
+
+
+def get_pred_hash(timestamp, input_file, output_file):
+    data = data_pipeline(timestamp, input_file)
+    timestamp = pd.Timestamp(timestamp)
+    train_data = data[data.time <= timestamp]
+
+    pred_hash = train_data.groupby(
+        ['device', 'day_name', 'hour']
+    ).agg(
+        device_activated=('device_activated', 'max')
+    ).reset_index()
+
+    return pred_hash
+
+
+def generate_prediction_holder(timestamp,pred_hash):
+    timestamp = pd.Timestamp(timestamp)
+    split_point = timestamp.round(freq='T')
+    next_24_hours = pd.date_range(split_point, periods=24, freq='H').ceil('H')
+    device_names = sorted(pred_hash.device.unique())
+
+    xproduct = list(itertools.product(next_24_hours, device_names))
+    prediction_holder = pd.DataFrame(xproduct, columns=['time', 'device'])
+
+    prediction_holder['day_name'] = prediction_holder.time.dt.day_name()
+    prediction_holder['hour'] = prediction_holder.time.dt.hour
+    columns = [
+        'time',
+        'device',
+        'day_name',
+        'hour'
+    ]
+
+    prediction_holder = prediction_holder[columns]
+
+    return prediction_holder
+
+
+def make_pred(timestamp, input_file, output_file):
+    pred_hash = get_pred_hash(timestamp, input_file, output_file)
+    prediction_holder = generate_prediction_holder(timestamp,pred_hash)
+    pred = prediction_holder.merge(pred_hash, how='left', on=['device', 'day_name', 'hour'])
+    pred = pred[[
+        'time',
+        'device',
+        'device_activated'
+    ]]
+    pred = pred.sort_values(by=[
+        'time', 'device'
+    ])
+
+    return pred
+
+
+
+if __name__ == '__main__':
+    timestamp = '2016-08-31 23:59:59'
+    input_file = 'data\device_activations.csv'
+    output_file = 'data\myresult.csv'
+
+    pred = make_pred(timestamp, input_file, output_file)
+    print(pred)
