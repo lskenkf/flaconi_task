@@ -9,26 +9,25 @@ will explain my idea and implementation of the model. In the second part, I will
 improve the model performance.
 
 1.
-
 Now, I want to talk briefly about the idea and process behind the model formulation.
 Since we want to forecast the occupancy of each room given a split point, whose next hour will be the first hour we have to 
 predict, my first thought is to use the historical data to predict the next 24 hours' occupancy of each meeting room using 
 regular ml approach, i.e., use model to predict.
 
-I abondan it because firstly, we need to do autoregression, i.e., from starting point t we want to predict until 
+my submitted solution is not this because firstly, we need to do autoregression, i.e., from starting point t we want to predict until 
 t + 24, but this uses previous prediction as input for next prediction, that is to say we will add errors into the whole 
 model. Secondly, in order to let the model work, we have to impute the time when the room is not occupied,i.e., add a negative 
 target to let the model to learn. If we do so, we will face a very imbalanced dataset, it will also make the model perform 
 very week. Although, we can try some rebalancing technics, but these do not solve the problem completely.
 
 My second attempt is to use device, day, hour info of each timestamp, so that we can have a mapping like 
-map(device_name, day_name,hour) -> occupancy_next_hour, I did this with a regression model from automl packages, but it 
+map(device_name, day_name, hour) -> occupancy_next_hour, I did this with a regression model from automl packages, but it 
 performed very weakly. I think the reason is due to the imbalanced data issue.
 
 Still I want the mapping like above. I think maybe, the pattern of previous data can be used like a hash mapping for the future 
 meeting room occupancy. At last, what I did is to aggregate the historical data of meeting occupancy of each device, so 
 if we want to predict for friday from 0 to 23 for device_1, then we can extract the info from this hash table. That is to say, the pattern 
-of futuer room occupancy shall follow the previous room occupancy pattern.
+of future room occupancy shall follow the previous room occupancy pattern.
 
 After some model evaluation, I think it is stable and is a much more reliable solution.
 At the end, I implemented this one with a simple class whose explanation can be found below.
@@ -38,6 +37,9 @@ In the model evaluation process, I checked the performance for each timestamp, a
 i.e., we predict that the room will be occupied but it is not. If I have more time, I think I can do some more data analysis to figure 
 out the reason of the false positive. Afterwards. I can upgrade the model with some proper approaches.
   
+If you read until this part, I want to thank you again for your time. I hope that my solution can impress you and get me 
+a step further to the next hiring process. Btw, you can also fork: https://github.com/lskenkf/flaconi_task to get access to 
+the repo of this case.
 
 """
 
@@ -260,7 +262,7 @@ class frequentist_model:
         ]]
         pred = pred.fillna(0) # if a device/meeting room appears for the first time in test set, than we set its occupancy as 0.
         pred.loc[pred['device'] == 'device_7', 'device_activated'] = 0 # we set like this because room 7 is highly rarely used.
-        pred.to_csv(output_file)
+        pred.to_csv(self.output_file)
 
         return pred
 
@@ -271,4 +273,3 @@ if __name__ == '__main__':
     frequentist_model = frequentist_model(timestamp, input_file, output_file)
     pred = frequentist_model.make_pred()
 
-    #solution.py "2016-08-29 00:00:00" data\device_activations.csv myresult.csv
