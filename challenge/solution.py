@@ -271,5 +271,4 @@ if __name__ == '__main__':
     frequentist_model = frequentist_model(timestamp, input_file, output_file)
     pred = frequentist_model.make_pred()
 
-
-    #solution.py "2016-08-29 00:00:00" data\device_activations.csv data\myresult.csv
+    #solution.py "2016-08-29 00:00:00" data\device_activations.csv myresult.csv
